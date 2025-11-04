@@ -1,0 +1,22 @@
+{
+  "name": "Unified EC2 DevContainer",
+  "build": { "dockerfile": "Dockerfile" },
+  "runArgs": ["--privileged"],
+  "remoteUser": "node",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "eamodio.gitlens",
+        "github.copilot"
+      ]
+    }
+  },
+  "postCreateCommand": "init-devcontainer.sh"
+}

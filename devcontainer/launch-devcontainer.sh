@@ -1,45 +1,50 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Default values
-REPO=""
+REPO_NAME=""
+GITHUB_PAT=""
+REBUILD=false
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --repo) REPO="$2"; shift 2;;
-    *) echo "Unknown argument: $1"; exit 1;;
+    --repo) REPO_NAME="$2"; shift 2;;
+    --github-pat) GITHUB_PAT="$2"; shift 2;;
+    --rebuild) REBUILD=true; shift;;
+    *) shift;;
   esac
 done
 
-if [ -z "$REPO" ]; then
-  echo "❌ Repo name required. Usage: launch-devcontainer.sh --repo <name>"
+if [[ -z "$REPO_NAME" ]]; then
+  echo "❌ Usage: $0 --repo <repo_name> [--github-pat <token>] [--rebuild]"
   exit 1
 fi
 
-REPO_DIR="/home/ec2-user/$REPO"
-echo "🚀 Launching DevContainer for $REPO..."
+source /home/ec2-user/.devcontainer.env || true
 
-if [ ! -d "$REPO_DIR" ]; then
-  echo "📦 Cloning repository $REPO..."
-  if [ -f /home/ec2-user/.devcontainer.env ]; then
-    source /home/ec2-user/.devcontainer.env
-  fi
-  if [ -n "${GITHUB_PAT:-}" ]; then
-    git clone "https://${GITHUB_PAT}@github.com/chrisayl/${REPO}.git" "$REPO_DIR"
-  else
-    git clone "https://github.com/chrisayl/${REPO}.git" "$REPO_DIR"
-  fi
-else
-  echo "🔄 Repo exists, pulling latest..."
-  cd "$REPO_DIR"
-  git pull
+CONTAINER_NAME="devcontainer_${REPO_NAME}"
+CONFIG_VOL="devcontainer_config"
+WORK_VOL="devcontainer_${REPO_NAME}_workspace"
+
+echo "🚧 Building DevContainer for repo: $REPO_NAME"
+
+if $REBUILD; then
+  docker rm -f "$CONTAINER_NAME" 2>/dev/null || true
 fi
 
-cd "$REPO_DIR"
-if [ -d ".devcontainer" ]; then
-  echo "🏗️ Building DevContainer..."
-  devcontainer up --workspace-folder . || true
-else
-  echo "⚠️ No .devcontainer directory found in $REPO_DIR."
-fi
+docker volume create "$CONFIG_VOL" >/dev/null
+docker volume create "$WORK_VOL" >/dev/null
 
-echo "✅ Done! You can now connect via VS Code Remote SSH."
+docker build -t unified-devcontainer ./.devcontainer
+
+echo "🚀 Starting container $CONTAINER_NAME ..."
+docker run -d --name "$CONTAINER_NAME" \
+  --privileged \
+  --restart unless-stopped \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v "$CONFIG_VOL":/config \
+  -v "$WORK_VOL":/workspace \
+  -e CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN" \
+  -e GITHUB_PAT="$GITHUB_PAT" \
+  unified-devcontainer
+
+echo "✅ Container $CONTAINER_NAME started successfully!"

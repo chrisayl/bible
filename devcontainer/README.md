@@ -1,38 +1,56 @@
-# DevContainer EC2 Toolkit
+# Unified Persistent DevContainer (EC2 Host Setup)
 
-This directory bootstraps and manages **secure DevContainers on an EC2 host**.
+This setup provides a **single golden development environment** hosted on EC2,
+with per-repo isolation and persistent config (Docker-in-Docker).
 
-## 🧭 Usage
+## 🚀 Quickstart
 
-### 1️⃣ From your local Mac
+### 1️⃣ One-time EC2 host setup
 ```bash
-bash devcontainer/remote-init.sh
-```
-This will:
-- Connect to your EC2 host
-- Clone this repo into `/home/ec2-user/devcontainer`
-- Run `setup-host.sh` to install Docker + Node + DevContainers CLI
-- Register `launch-devcontainer.sh` globally on the EC2 host
-
-### 2️⃣ From EC2
-```bash
-launch-devcontainer.sh --repo the-firm
-```
-This spins up (or updates) the specified repo's DevContainer in `/home/ec2-user/the-firm`.
-
-### 3️⃣ Secrets
-Create a `/home/ec2-user/.devcontainer.env` file based on `.devcontainer.env.example`.
-
-Example:
-```bash
-GITHUB_PAT=ghp_XXXX
-CLAUDE_CODE_OAUTH_TOKEN=sk-ant-XXXX
+bash devcontainer/setup-host.sh
 ```
 
-All containers automatically load these env vars at build time.
+### 2️⃣ Launch a new repo environment
+```bash
+bash devcontainer/launch-devcontainer.sh --repo the-firm --github-pat ghp_xxx
+```
+
+### 3️⃣ Rebuild or update
+```bash
+bash devcontainer/launch-devcontainer.sh --repo the-firm --rebuild
+```
+
+### 4️⃣ Connect via VS Code
+```bash
+code --remote ssh-remote+ec2-dev
+```
 
 ---
 
-✅ Works on **Amazon Linux 2023** or **Ubuntu**
-✅ Re-runnable and idempotent
-✅ Does not expose secrets locally
+## 🔐 Secrets
+Global tokens in `/home/ec2-user/.devcontainer.env`:
+
+```bash
+CLAUDE_CODE_OAUTH_TOKEN=sk-ant-xxxxx
+```
+
+---
+
+## 📦 Structure
+```
+bible/devcontainer/
+├── README.md
+├── remote-init.sh
+├── setup-host.sh
+├── launch-devcontainer.sh
+├── scripts/
+│   └── utils.sh
+└── .devcontainer/
+    ├── devcontainer.json
+    ├── Dockerfile
+    ├── init-devcontainer.sh
+    ├── code_standards.md
+    ├── .env.example
+    └── systemd/
+        └── devcontainer.service
+```

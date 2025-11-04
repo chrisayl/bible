@@ -1,6 +1,0 @@
-#!/usr/bin/env bash
-set -euo pipefail
-load_env(){ local f="/home/ec2-user/.devcontainer.env"; [[ -f "$f" ]] || return 0; echo "🔐 Loading $f"; while IFS='=' read key val; do [[ -z "$key" ]] && continue; [[ "$key" =~ ^# ]] && continue; export "$key"="$(echo "$val" | sed -e 's/^"//' -e 's/"$//')"; done < <(grep -v '^\s*$' "$f"); }
-ensure_docker(){ if ! command -v docker >/dev/null 2>&1; then if command -v apt-get >/dev/null 2>&1; then sudo apt-get update && sudo apt-get install -y docker.io; elif command -v dnf >/dev/null 2>&1; then sudo dnf install -y docker; else sudo yum install -y docker; fi; sudo systemctl enable --now docker; sudo usermod -aG docker ec2-user || true; fi; }
-ensure_devcontainers_cli(){ command -v devcontainer >/dev/null 2>&1 || sudo npm install -g @devcontainers/cli; }
-clone_or_create_repo(){ local user="$1" pat="$2" repo="$3" private="$4"; local path="/home/ec2-user/${repo}"; if [[ -d "${path}/.git" ]]; then git -C "${path}" pull; return; fi; local status; status=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: token ${pat}" "https://api.github.com/repos/${user}/${repo}"); if [[ "$status" == "404" ]]; then curl -s -H "Authorization: token ${pat}" -d "{"name":"${repo}","private":${private}}" https://api.github.com/user/repos >/dev/null; fi; git clone "https://${user}:${pat}@github.com/${user}/${repo}.git" "${path}"; }
